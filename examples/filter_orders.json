@@ -1,0 +1,51 @@
+{
+  "nodes": [
+    {
+      "id": "orders-source",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "raw_orders",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest",
+          "consumerGroupId": "streametl-filter-example"
+        }
+      }
+    },
+    {
+      "id": "parse-orders",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+        }
+      }
+    },
+    {
+      "id": "filter-completed",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Filter",
+        "params": {
+          "condition": "status = 'COMPLETED' AND amount > 100"
+        }
+      }
+    },
+    {
+      "id": "filtered-sink",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "filtered_orders",
+        "params": {
+          "acksPolicy": "all"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {"source": "orders-source", "target": "parse-orders"},
+    {"source": "parse-orders", "target": "filter-completed"},
+    {"source": "filter-completed", "target": "filtered-sink"}
+  ]
+}

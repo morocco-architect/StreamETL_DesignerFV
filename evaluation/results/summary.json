@@ -1,0 +1,27 @@
+{
+  "iterations_per_pipeline": 50,
+  "pipelines": {
+    "bounded_stream_join": {
+      "median_analyze_ms": 1.794674,
+      "median_generate_ms": 2.027199,
+      "generated_loc": 46,
+      "success_rate": 1.0
+    },
+    "filter_orders": {
+      "median_analyze_ms": 1.6862305,
+      "median_generate_ms": 1.9435635,
+      "generated_loc": 32,
+      "success_rate": 1.0
+    },
+    "windowed_parquet": {
+      "median_analyze_ms": 1.638113,
+      "median_generate_ms": 1.948383,
+      "generated_loc": 32,
+      "success_rate": 1.0
+    }
+  },
+  "guardrails": {
+    "correct": 5,
+    "total": 5
+  }
+}

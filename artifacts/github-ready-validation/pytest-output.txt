@@ -1,0 +1,29 @@
+..................................                                       [100%]
+=============================== warnings summary ===============================
+intelligence/tests/test_router.py::test_repair_window_requires_explicit_event_time_fields
+  /opt/pyvenv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:1002: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    result = context.run(func, *args)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.5-final-0 ________________
+
+Name                                 Stmts   Miss  Cover   Missing
+------------------------------------------------------------------
+config.py                               10      0   100%
+database.py                             17      7    59%   28, 45-55
+intelligence/__init__.py                 1      0   100%
+intelligence/error_diagnosis.py         62     29    53%   142-162, 181-192, 196-206
+intelligence/pipeline_assistant.py      42     29    31%   22-30, 41-68
+intelligence/prompts.py                  2      0   100%
+intelligence/providers.py              115     41    64%   34, 38, 80-81, 97, 128-129, 137-148, 153, 155, 159-166, 170-176, 179, 187-191
+intelligence/repair.py                  57     20    65%   37, 41, 44, 52, 59, 70-88, 95, 99, 110-116
+intelligence/router.py                  33      5    85%   35, 43-46
+intelligence/schemas.py                149      6    96%   72, 79, 101, 110, 114, 117
+intelligence/semantic_advisor.py       191     26    86%   63, 72, 81, 89, 99, 107, 140, 148, 159, 169, 180, 210, 230-238, 265, 273, 297-304, 442, 453, 484, 487, 492, 496
+main.py                                492    160    67%   58-59, 91-98, 129, 135-138, 150-171, 182-183, 198-201, 213-230, 236-251, 257-267, 273-317, 344, 364, 448, 484-490, 524, 547, 625, 640-652, 681, 696-698, 710, 717, 734-744, 749-753, 777, 807, 830-831, 844-887, 896-913, 922-942
+models.py                               12      0   100%
+------------------------------------------------------------------
+TOTAL                                 1183    323    73%
+Coverage XML written to file ../artifacts/github-ready-validation/coverage.xml
+34 passed, 1 warning in 0.94s

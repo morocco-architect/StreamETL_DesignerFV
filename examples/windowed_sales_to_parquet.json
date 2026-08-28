@@ -1,0 +1,67 @@
+{
+  "nodes": [
+    {
+      "id": "orders-source",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "raw_orders",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest",
+          "consumerGroupId": "streametl-window-example"
+        }
+      }
+    },
+    {
+      "id": "parse-orders",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+        }
+      }
+    },
+    {
+      "id": "group-window",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "GroupBy",
+        "params": {
+          "columns": "user_id",
+          "windowEnabled": true,
+          "windowDuration": "10 minutes",
+          "windowSlide": "5 minutes",
+          "timestampCol": "event_time",
+          "watermarkDelay": "10 minutes"
+        }
+      }
+    },
+    {
+      "id": "sum-amount",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Aggregate",
+        "params": {
+          "aggregations": [
+            {"func": "sum", "col": "amount", "alias": "total_amount"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "parquet-sink",
+      "type": "parquetSink",
+      "data": {
+        "path": "/tmp/parquet_windowed_sales",
+        "params": {}
+      }
+    }
+  ],
+  "edges": [
+    {"source": "orders-source", "target": "parse-orders"},
+    {"source": "parse-orders", "target": "group-window"},
+    {"source": "group-window", "target": "sum-amount"},
+    {"source": "sum-amount", "target": "parquet-sink"}
+  ]
+}

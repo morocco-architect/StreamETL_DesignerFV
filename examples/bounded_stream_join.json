@@ -1,0 +1,82 @@
+{
+  "nodes": [
+    {
+      "id": "orders-source",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "orders",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest",
+          "consumerGroupId": "streametl-join-orders"
+        }
+      }
+    },
+    {
+      "id": "parse-orders",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, event_time TIMESTAMP"
+        }
+      }
+    },
+    {
+      "id": "events-source",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "events",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest",
+          "consumerGroupId": "streametl-join-events"
+        }
+      }
+    },
+    {
+      "id": "parse-events",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "event_id STRING, user_id INT, event_type STRING, event_time TIMESTAMP"
+        }
+      }
+    },
+    {
+      "id": "bounded-join",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Join",
+        "params": {
+          "joinKey": "user_id",
+          "joinType": "inner",
+          "enableWatermarks": true,
+          "leftWatermarkCol": "event_time",
+          "leftWatermarkDelay": "10 minutes",
+          "rightWatermarkCol": "event_time",
+          "rightWatermarkDelay": "10 minutes",
+          "timeBoundEnabled": true,
+          "timeRangeBefore": "10 minutes",
+          "timeRangeAfter": "5 minutes"
+        }
+      }
+    },
+    {
+      "id": "joined-sink",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "joined_events",
+        "params": {"acksPolicy": "all"}
+      }
+    }
+  ],
+  "edges": [
+    {"source": "orders-source", "target": "parse-orders"},
+    {"source": "events-source", "target": "parse-events"},
+    {"source": "parse-orders", "target": "bounded-join"},
+    {"source": "parse-events", "target": "bounded-join"},
+    {"source": "bounded-join", "target": "joined-sink"}
+  ]
+}

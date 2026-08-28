@@ -1,0 +1,14 @@
+[run]
+source = .
+omit =
+    pipeline_job.py
+    tests/*
+    intelligence/tests/*
+    intelligence/tests/demo.py
+
+[report]
+show_missing = True
+skip_covered = False
+
+[xml]
+output = coverage.xml
