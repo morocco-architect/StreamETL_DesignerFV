@@ -216,7 +216,7 @@ The script records environment metadata, JUnit output and coverage under `artifa
 - A/B/C evidence is a retrospective assessment, not 54 independent new model generations.
 - Experimental L4 evidence: F01 filtering, W01 windowed aggregation, J01 stream-stream join.
 - Evidence: evaluation/schema_validation_v1/, evaluation/l4/, artifacts/ai_benchmark/, artifacts/ai_benchmark_abc_v2/.
-- CI on Linux and frontend build: pending remote verification.
+- GitHub Actions CI: SUCCESS on 2026-11-18 for backend Python 3.10 and 3.12 (Ubuntu) and frontend Node.js 20; verified run: https://github.com/morocco-architect/StreamETL_DesignerFV/actions/runs/44336358013
 - License: MIT (project code; third-party licenses remain applicable).
 
 

@@ -15,7 +15,7 @@
 - Statement coverage: 82%; combined statement/branch coverage: 79%.
 - Schema-aware acceptance: A 12/18, B 15/18, C 15/18.
 - A/B/C results are retrospective validation of archived DAGs, not independent new model generations.
-- GitHub Actions Linux and frontend CI results remain pending.
+- GitHub Actions CI passed on 2026-11-18: backend Python 3.10/3.12 on Ubuntu and frontend Node.js 20 (commit 5c20696; run 44336358013).
 
 ### Limitations
 - Automated tests do not establish real-user productivity improvements.
