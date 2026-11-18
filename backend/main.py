@@ -357,20 +357,48 @@ def _comment_text(value: object, max_length: int = 160) -> str:
     return text[:max_length]
 
 
-def _normalise_interval(value: str, *, field_name: str) -> str:
-    """Validate a bounded event-time interval and return Spark SQL INTERVAL text."""
-    match = _DURATION_RE.fullmatch(str(value or ""))
+def _normalise_stream_duration(value: object, *, field_name: str) -> str:
+    """Return a Spark Structured Streaming duration string.
+
+    Bare numeric values entered by the low-code UI are interpreted as seconds
+    (e.g. ``5`` -> ``5 seconds``). Values that already include a supported
+    unit are preserved after validation (e.g. ``10 minutes``).
+    """
+    text = str(value or "").strip()
+    if re.fullmatch(r"\d+(?:\.\d+)?", text):
+        return f"{text} seconds"
+    if _DURATION_RE.fullmatch(text):
+        return text
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"Validation Error: {field_name} must be a number of seconds "
+            "or a duration such as '10 seconds', '2 minutes', '1 hour', or '1 day'."
+        ),
+    )
+
+
+def _normalise_interval(value: object, *, field_name: str) -> str:
+    """Validate a bounded event-time interval and return Spark SQL INTERVAL text.
+
+    Bare numeric values entered in the low-code UI are interpreted as seconds,
+    matching the behaviour used for window and watermark durations.
+    """
+    text = str(value or "").strip()
+    if re.fullmatch(r"\d+(?:\.\d+)?", text):
+        return f"INTERVAL {text} SECONDS"
+
+    match = _DURATION_RE.fullmatch(text)
     if not match:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Validation Error: {field_name} must look like '10 minutes', "
-                "'30 seconds', '2 hours', or '1 day'."
+                f"Validation Error: {field_name} must be a number of seconds "
+                "or a duration such as '10 seconds', '2 minutes', '1 hour', or '1 day'."
             ),
         )
     amount, unit = match.groups()
-    unit = unit.upper()
-    return f"INTERVAL {amount} {unit}"
+    return f"INTERVAL {amount} {unit.upper()}"
 
 
 def _preflight_pipeline(payload: dict):
@@ -616,6 +644,7 @@ def generate_pipeline(payload: dict):
                     slide = params.get("windowSlide", "")
 
                     if watermark and ts_col:
+                        watermark = _normalise_stream_duration(watermark, field_name="watermarkDelay")
                         code.append(f"{new_df} = {current_df}.withWatermark({_py_literal(ts_col)}, {_py_literal(watermark)})")
                         current_df = new_df
 
@@ -685,8 +714,9 @@ def generate_pipeline(payload: dict):
 
                     if gb_config.get("windowEnabled") and gb_config.get("windowDuration") and gb_config.get("timestampCol"):
                         ts_col = gb_config["timestampCol"]
-                        duration = gb_config["windowDuration"]
-                        slide = gb_config.get("windowSlide", "")
+                        duration = _normalise_stream_duration(gb_config["windowDuration"], field_name="windowDuration")
+                        slide_raw = gb_config.get("windowSlide", "")
+                        slide = _normalise_stream_duration(slide_raw, field_name="windowSlide") if str(slide_raw).strip() else ""
                         if slide:
                             window_expr = f"window({_py_literal(ts_col)}, {_py_literal(duration)}, {_py_literal(slide)})"
                         else:
@@ -760,12 +790,14 @@ def generate_pipeline(payload: dict):
 
                 if enable_watermarks:
                     if l_col and l_delay:
+                        l_delay = _normalise_stream_duration(l_delay, field_name="leftWatermarkDelay")
                         left_df_wm = f"{left_df}_wm"
                         code.append(
                             f"{left_df_wm} = {left_df}.withWatermark({_py_literal(l_col)}, {_py_literal(l_delay)})"
                         )
                         left_df = left_df_wm
                     if r_col and r_delay:
+                        r_delay = _normalise_stream_duration(r_delay, field_name="rightWatermarkDelay")
                         right_df_wm = f"{right_df}_wm"
                         code.append(
                             f"{right_df_wm} = {right_df}.withWatermark({_py_literal(r_col)}, {_py_literal(r_delay)})"
@@ -773,42 +805,97 @@ def generate_pipeline(payload: dict):
                         right_df = right_df_wm
 
                 rk = right_key if right_key else join_key
-                if join_type == "cross":
-                    join_cond = None
-                else:
-                    # Column-form equality avoids string-code interpolation and can be
-                    # extended safely with an event-time range condition.
-                    join_cond = (
-                        f"({left_df}[{_py_literal(join_key)}] == "
-                        f"{right_df}[{_py_literal(rk)}])"
-                    )
-
-                # A stream-stream join is accepted only when semantic preflight has
-                # complete watermarks and an explicit bounded event-time range.
-                if left_is_stream and right_is_stream and join_type != "cross":
-                    before = _normalise_interval(
-                        params.get("timeRangeBefore", ""),
-                        field_name="timeRangeBefore",
-                    )
-                    after = _normalise_interval(
-                        params.get("timeRangeAfter", ""),
-                        field_name="timeRangeAfter",
-                    )
-                    time_cond = (
-                        f"(({left_df}[{_py_literal(l_col)}] >= "
-                        f"{right_df}[{_py_literal(r_col)}] - expr({_py_literal(before)})) & "
-                        f"({left_df}[{_py_literal(l_col)}] <= "
-                        f"{right_df}[{_py_literal(r_col)}] + expr({_py_literal(after)})))"
-                    )
-                    join_cond = f"({join_cond}) & ({time_cond})"
-
                 right_ref = f"broadcast({right_df})" if broadcast_hint else right_df
+
                 if join_type == "cross":
                     code.append(f"{new_df} = {left_df}.crossJoin({right_ref})")
                 else:
-                    code.append(
-                        f"{new_df} = {left_df}.join({right_ref}, {join_cond}, {_py_literal(join_type)})"
+                    # Always qualify both inputs with aliases.  This prevents ambiguous
+                    # references when both sides expose columns such as user_id/event_time.
+                    left_alias = "l"
+                    right_alias = "r"
+                    join_cond = (
+                        f"(col({_py_literal(left_alias + '.' + join_key)}) == "
+                        f"col({_py_literal(right_alias + '.' + rk)}))"
                     )
+
+                    # A stream-stream join is accepted only when semantic preflight has
+                    # complete watermarks and an explicit bounded event-time range.
+                    if left_is_stream and right_is_stream:
+                        before = _normalise_interval(
+                            params.get("timeRangeBefore", ""),
+                            field_name="timeRangeBefore",
+                        )
+                        after = _normalise_interval(
+                            params.get("timeRangeAfter", ""),
+                            field_name="timeRangeAfter",
+                        )
+                        time_cond = (
+                            f"((col({_py_literal(left_alias + '.' + l_col)}) >= "
+                            f"col({_py_literal(right_alias + '.' + r_col)}) - expr({_py_literal(before)})) & "
+                            f"(col({_py_literal(left_alias + '.' + l_col)}) <= "
+                            f"col({_py_literal(right_alias + '.' + r_col)}) + expr({_py_literal(after)})))"
+                        )
+                        join_cond = f"({join_cond}) & ({time_cond})"
+
+                    raw_join_df = f"{new_df}_raw"
+                    code.append(
+                        f"{raw_join_df} = {left_df}.alias({_py_literal(left_alias)}).join("
+                        f"{right_ref}.alias({_py_literal(right_alias)}), "
+                        f"{join_cond}, {_py_literal(join_type)})"
+                    )
+
+                    # Spark can carry duplicate column names in-memory, but Parquet/file
+                    # sinks reject them.  Build a deterministic, unique output schema:
+                    #   * keep one copy of the join key;
+                    #   * shared left columns -> left_<name>;
+                    #   * shared right columns -> right_<name>;
+                    #   * non-shared columns keep their original names.
+                    # This turns event_time/event_time into left_event_time/right_event_time
+                    # and removes the duplicate right-side user_id in the common case.
+                    left_cols_var = f"_join_left_cols_{step}"
+                    right_cols_var = f"_join_right_cols_{step}"
+                    shared_cols_var = f"_join_shared_cols_{step}"
+                    select_cols_var = f"_join_select_cols_{step}"
+                    code.append(f"{left_cols_var} = list({left_df}.columns)")
+                    code.append(f"{right_cols_var} = list({right_df}.columns)")
+                    code.append(f"{shared_cols_var} = set({left_cols_var}) & set({right_cols_var})")
+                    code.append(f"{select_cols_var} = []")
+
+                    # Keep a single logical join key.  For right/full joins coalesce both
+                    # sides so the key is preserved even when the left side is null.
+                    if join_type in {"right", "right_outer", "outer", "full", "full_outer", "fullouter"}:
+                        code.append(
+                            f"{select_cols_var}.append(coalesce("
+                            f"col({_py_literal(left_alias + '.' + join_key)}), "
+                            f"col({_py_literal(right_alias + '.' + rk)}))"
+                            f".alias({_py_literal(join_key)}))"
+                        )
+                    else:
+                        code.append(
+                            f"{select_cols_var}.append("
+                            f"col({_py_literal(left_alias + '.' + join_key)}).alias({_py_literal(join_key)}))"
+                        )
+
+                    code.append(f"for _c in {left_cols_var}:")
+                    code.append(f"    if _c == {_py_literal(join_key)}:")
+                    code.append("        continue")
+                    code.append(
+                        f"    _out = f'left_{{_c}}' if _c in {shared_cols_var} else _c"
+                    )
+                    code.append(
+                        f"    {select_cols_var}.append(col(f'{left_alias}.`{{_c}}`').alias(_out))"
+                    )
+                    code.append(f"for _c in {right_cols_var}:")
+                    code.append(f"    if _c == {_py_literal(rk)}:")
+                    code.append("        continue")
+                    code.append(
+                        f"    _out = f'right_{{_c}}' if _c in {shared_cols_var} else _c"
+                    )
+                    code.append(
+                        f"    {select_cols_var}.append(col(f'{right_alias}.`{{_c}}`').alias(_out))"
+                    )
+                    code.append(f"{new_df} = {raw_join_df}.select(*{select_cols_var})")
 
                 node_is_streaming[nid] = left_is_stream or right_is_stream
 

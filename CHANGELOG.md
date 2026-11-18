@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.2.0 - scientific revision (2026-11-18)
+
+### Added
+- Schema-aware deterministic validation before PySpark generation.
+- Schema analysis regression tests and semantic decision matrix.
+- Archived A/B/C benchmark evidence: 54 DAGs retrospectively re-evaluated.
+- L4 experimental evidence for F01 filtering, W01 windowed aggregation, and J01 streaming join.
+- Project-level MIT LICENSE.
+- Updated GitHub Actions workflow for Python 3.10/3.12 and frontend build.
+
+### Validation snapshot
+- Local Windows Python 3.12.10: 94/94 backend tests passed.
+- Statement coverage: 82%; combined statement/branch coverage: 79%.
+- Schema-aware acceptance: A 12/18, B 15/18, C 15/18.
+- A/B/C results are retrospective validation of archived DAGs, not independent new model generations.
+- GitHub Actions CI passed on 2026-11-18: backend Python 3.10/3.12 on Ubuntu and frontend Node.js 20 (commit 5c20696; run 44336358013).
+
+### Limitations
+- Automated tests do not establish real-user productivity improvements.
+- Historical release-candidate validation and November experimental evidence remain distinct.
+
+
+
 ## 1.2.0-rc1 — release candidate
 
 ### Added

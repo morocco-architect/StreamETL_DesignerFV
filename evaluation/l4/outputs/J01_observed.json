@@ -1,0 +1,18 @@
+[
+  {
+    "user_id": 11,
+    "order_id": "O1",
+    "event_id": "E1",
+    "amount": 120.0,
+    "left_event_time": "2026-11-14T00:02:00",
+    "right_event_time": "2026-11-14T00:00:00"
+  },
+  {
+    "user_id": 11,
+    "order_id": "O2",
+    "event_id": "E2",
+    "amount": 75.0,
+    "left_event_time": "2026-11-14T00:25:00",
+    "right_event_time": "2026-11-14T00:30:00"
+  }
+]

@@ -1,0 +1,11 @@
+[run]
+source = backend
+
+omit =
+    backend/tests/*
+    backend/intelligence/tests/*
+    backend/main_backup_before_join_fix.py
+    backend/mainn.py
+    backend/mainnn.py
+    backend/intelligence/semantic_advisorr.py
+    backend/pipeline_job.py

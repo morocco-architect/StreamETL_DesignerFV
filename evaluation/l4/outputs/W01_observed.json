@@ -1,0 +1,26 @@
+[
+  {
+    "user_id": 11,
+    "window_start": "2026-11-13T23:55:00",
+    "window_end": "2026-11-14T00:05:00",
+    "total_amount": 100.0
+  },
+  {
+    "user_id": 11,
+    "window_start": "2026-11-14T00:00:00",
+    "window_end": "2026-11-14T00:10:00",
+    "total_amount": 120.0
+  },
+  {
+    "user_id": 11,
+    "window_start": "2026-11-14T00:05:00",
+    "window_end": "2026-11-14T00:15:00",
+    "total_amount": 60.0
+  },
+  {
+    "user_id": 11,
+    "window_start": "2026-11-14T00:10:00",
+    "window_end": "2026-11-14T00:20:00",
+    "total_amount": 40.0
+  }
+]

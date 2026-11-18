@@ -1,0 +1,107 @@
+{
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "raw_orders",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "node_2",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+        }
+      },
+      "position": {
+        "x": 340.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "node_3",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "GroupBy",
+        "params": {
+          "columns": "user_id",
+          "windowEnabled": true,
+          "windowDuration": "15 minutes",
+          "windowSlide": "5 minutes",
+          "timestampCol": "event_time",
+          "watermarkDelay": "10 minutes"
+        }
+      },
+      "position": {
+        "x": 600.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "node_4",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Aggregate",
+        "params": {
+          "aggregations": [
+            {
+              "func": "sum",
+              "col": "amount",
+              "alias": "total_amount"
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 860.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "node_5",
+      "type": "parquetSink",
+      "data": {
+        "params": {},
+        "path": "/tmp/parquet_windowed_sales"
+      },
+      "position": {
+        "x": 1120.0,
+        "y": 80.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "node_1",
+      "target": "node_2"
+    },
+    {
+      "id": "e2",
+      "source": "node_2",
+      "target": "node_3"
+    },
+    {
+      "id": "e3",
+      "source": "node_3",
+      "target": "node_4"
+    },
+    {
+      "id": "e4",
+      "source": "node_4",
+      "target": "node_5"
+    }
+  ],
+  "explanation": "Kafka raw_orders -> ParseJSON -> GroupBy user_id with windowing -> Aggregate sum amount -> Parquet /tmp/parquet_windowed_sales"
+}

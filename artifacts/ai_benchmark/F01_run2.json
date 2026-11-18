@@ -1,0 +1,80 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "raw_orders",
+        "params": {
+          "bootstrap.servers": "localhost:9092",
+          "readMode": "stream",
+          "startingOffset": "latest"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n2",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+        }
+      },
+      "position": {
+        "x": 340.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n3",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Filter",
+        "params": {
+          "condition": "status = 'COMPLETED' AND amount > 100"
+        }
+      },
+      "position": {
+        "x": 600.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n4",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "filtered_orders",
+        "params": {
+          "bootstrap.servers": "localhost:9092"
+        }
+      },
+      "position": {
+        "x": 860.0,
+        "y": 80.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n2"
+    },
+    {
+      "id": "e2",
+      "source": "n2",
+      "target": "n3"
+    },
+    {
+      "id": "e3",
+      "source": "n3",
+      "target": "n4"
+    }
+  ],
+  "explanation": "Streaming Kafka-to-Kafka DAG with JSON parsing, filtering, and Kafka output"
+}

@@ -104,6 +104,7 @@ def test_windowed_watermarked_aggregation_to_parquet_uses_append():
     payload = {
         "nodes": [
             _base_source(),
+            {"id": "parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP, amount DOUBLE, product STRING"}}},
             {
                 "id": "gb",
                 "type": "sparkTransform",
@@ -122,7 +123,8 @@ def test_windowed_watermarked_aggregation_to_parquet_uses_append():
             {"id": "sink", "type": "parquetSink", "data": {"path": "/tmp/out", "params": {}}},
         ],
         "edges": [
-            {"source": "src", "target": "gb"},
+            {"source": "src", "target": "parse"},
+            {"source": "parse", "target": "gb"},
             {"source": "gb", "target": "agg"},
             {"source": "agg", "target": "sink"},
         ],
@@ -135,17 +137,59 @@ def test_windowed_watermarked_aggregation_to_parquet_uses_append():
     assert ".outputMode('complete')" not in code
 
 
+def test_numeric_window_and_watermark_durations_default_to_seconds():
+    payload = {
+        "nodes": [
+            _base_source(),
+            {"id": "parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP, amount DOUBLE, product STRING"}}},
+            {
+                "id": "gb",
+                "type": "sparkTransform",
+                "data": {
+                    "transformType": "GroupBy",
+                    "params": {
+                        "columns": "product",
+                        "windowEnabled": True,
+                        "windowDuration": "10",
+                        "windowSlide": "10",
+                        "timestampCol": "event_time",
+                        "watermarkDelay": "5",
+                    },
+                },
+            },
+            {"id": "agg", "type": "sparkTransform", "data": {"transformType": "Aggregate", "params": {"aggregations": [{"func": "sum", "col": "amount", "alias": "total_amount"}]}}},
+            {"id": "sink", "type": "parquetSink", "data": {"path": "/tmp/out", "params": {}}},
+        ],
+        "edges": [
+            {"source": "src", "target": "parse"},
+            {"source": "parse", "target": "gb"},
+            {"source": "gb", "target": "agg"},
+            {"source": "agg", "target": "sink"},
+        ],
+    }
+    response = client.post("/api/pipeline/generate", json=payload)
+    assert response.status_code == 200
+    code = response.json()["code"]
+    assert ".withWatermark('event_time', '5 seconds')" in code
+    assert "window('event_time', '10 seconds', '10 seconds')" in code
+    assert ".outputMode('append')" in code
+
+
 def _stream_stream_payload(join_params):
     return {
         "nodes": [
             {"id": "left", "type": "kafkaTopic", "data": {"label": "orders", "params": {"readMode": "stream"}}},
             {"id": "right", "type": "kafkaTopic", "data": {"label": "events", "params": {"readMode": "stream"}}},
+            {"id": "left_parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP, order_id STRING"}}},
+            {"id": "right_parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP, event_id STRING"}}},
             {"id": "join", "type": "sparkTransform", "data": {"transformType": "Join", "params": join_params}},
             _kafka_sink("joined"),
         ],
         "edges": [
-            {"source": "left", "target": "join"},
-            {"source": "right", "target": "join"},
+            {"source": "left", "target": "left_parse"},
+            {"source": "right", "target": "right_parse"},
+            {"source": "left_parse", "target": "join"},
+            {"source": "right_parse", "target": "join"},
             {"source": "join", "target": "sink"},
         ],
     }
@@ -186,12 +230,14 @@ def test_unsupported_aggregation_function_is_rejected():
     payload = {
         "nodes": [
             _base_source(),
+            {"id": "parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP, amount DOUBLE, product STRING"}}},
             {"id": "gb", "type": "sparkTransform", "data": {"transformType": "GroupBy", "params": {"columns": "user_id"}}},
             {"id": "agg", "type": "sparkTransform", "data": {"transformType": "Aggregate", "params": {"aggregations": [{"func": "__import__", "col": "amount"}]}}},
             _kafka_sink(),
         ],
         "edges": [
-            {"source": "src", "target": "gb"},
+            {"source": "src", "target": "parse"},
+            {"source": "parse", "target": "gb"},
             {"source": "gb", "target": "agg"},
             {"source": "agg", "target": "sink"},
         ],
@@ -199,3 +245,101 @@ def test_unsupported_aggregation_function_is_rejected():
     response = client.post("/api/pipeline/generate", json=payload)
     assert response.status_code == 400
     assert "unsupported aggregation function" in str(response.json()).lower()
+
+
+def test_bounded_join_deduplicates_output_columns_and_defaults_numeric_intervals_to_seconds():
+    payload = {
+        "nodes": [
+            {"id": "orders", "type": "kafkaTopic", "data": {"label": "orders_join", "params": {"readMode": "stream"}}},
+            {"id": "users", "type": "kafkaTopic", "data": {"label": "users_join", "params": {"readMode": "stream"}}},
+            {"id": "orders_parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "event_time TIMESTAMP, user_id STRING, order_id STRING, amount DOUBLE"}}},
+            {"id": "users_parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "event_time TIMESTAMP, user_id STRING, name STRING"}}},
+            {
+                "id": "join",
+                "type": "sparkTransform",
+                "data": {
+                    "transformType": "Join",
+                    "params": {
+                        "joinKey": "user_id",
+                        "rightKey": "user_id",
+                        "joinType": "inner",
+                        "enableWatermarks": True,
+                        "leftWatermarkCol": "event_time",
+                        "leftWatermarkDelay": "5",
+                        "rightWatermarkCol": "event_time",
+                        "rightWatermarkDelay": "5",
+                        "timeBoundEnabled": True,
+                        "timeRangeBefore": "10",
+                        "timeRangeAfter": "10",
+                    },
+                },
+            },
+            {"id": "sink", "type": "parquetSink", "data": {"path": "/tmp/bounded_join", "params": {}}},
+        ],
+        "edges": [
+            {"source": "orders", "target": "orders_parse"},
+            {"source": "users", "target": "users_parse"},
+            {"source": "orders_parse", "target": "join"},
+            {"source": "users_parse", "target": "join"},
+            {"source": "join", "target": "sink"},
+        ],
+    }
+    response = client.post("/api/pipeline/generate", json=payload)
+    assert response.status_code == 200, response.text
+    code = response.json()["code"]
+    compile(code, "generated_bounded_join.py", "exec")
+    assert ".withWatermark('event_time', '5 seconds')" in code
+    assert "INTERVAL 10 SECONDS" in code
+
+# The generator deduplicates shared columns dynamically:
+    assert "_join_shared_cols_" in code
+    assert "_join_select_cols_" in code
+    assert "f'left_{_c}'" in code
+    assert "f'right_{_c}'" in code
+
+# The join key is emitted only once:
+    assert ".alias('user_id')" in code
+
+    assert ".outputMode('append')" in code
+
+
+
+def test_generate_rejects_j01_raw_before_codegen():
+    import hashlib
+    import json
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from main import app
+
+    root = Path(__file__).resolve().parents[2]
+
+    dag_path = root / "evaluation/l4/J01/raw_isolated_dag.json"
+    job_path = root / "backend/pipeline_job.py"
+
+    def fingerprint(path):
+        if not path.exists():
+            return None
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    before = fingerprint(job_path)
+
+    dag = json.loads(dag_path.read_text(encoding="utf-8"))
+
+    response = TestClient(app).post(
+        "/api/pipeline/generate",
+        json=dag
+    )
+
+    assert response.status_code == 400
+
+    issues = response.json()["detail"]["issues"]
+
+    schema_issues = [
+        issue for issue in issues
+        if issue["code"] == "SCHEMA_COLUMN_UNAVAILABLE"
+    ]
+
+    assert len(schema_issues) == 4
+
+    # Le rejet ne doit pas modifier le code PySpark
+    assert fingerprint(job_path) == before

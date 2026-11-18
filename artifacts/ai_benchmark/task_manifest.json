@@ -1,0 +1,516 @@
+[
+  {
+    "id": "F01",
+    "prompt": "Create a streaming Kafka-to-Kafka DAG. Read raw_orders; ParseJSON with schema \"order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP\"; filter for status = 'COMPLETED' AND amount > 100; write to filtered_orders. Use exactly ParseJSON and Filter transformations.",
+    "reference": {
+      "nodes": [
+        {
+          "id": "orders-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "raw_orders",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-filter-example"
+            }
+          }
+        },
+        {
+          "id": "parse-orders",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "filter-completed",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "Filter",
+            "params": {
+              "condition": "status = 'COMPLETED' AND amount > 100"
+            }
+          }
+        },
+        {
+          "id": "filtered-sink",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "filtered_orders",
+            "params": {
+              "acksPolicy": "all"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "orders-source",
+          "target": "parse-orders"
+        },
+        {
+          "source": "parse-orders",
+          "target": "filter-completed"
+        },
+        {
+          "source": "filter-completed",
+          "target": "filtered-sink"
+        }
+      ]
+    },
+    "original": "filter_orders.json"
+  },
+  {
+    "id": "F02",
+    "prompt": "Make the same streaming order-filter pipeline: input Kafka raw_orders; parse schema \"order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP\"; filter status = 'COMPLETED' AND amount > 200; output Kafka filtered_orders.",
+    "reference": {
+      "nodes": [
+        {
+          "id": "orders-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "raw_orders",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-filter-example"
+            }
+          }
+        },
+        {
+          "id": "parse-orders",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "filter-completed",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "Filter",
+            "params": {
+              "condition": "status = 'COMPLETED' AND amount > 200"
+            }
+          }
+        },
+        {
+          "id": "filtered-sink",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "filtered_orders",
+            "params": {
+              "acksPolicy": "all"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "orders-source",
+          "target": "parse-orders"
+        },
+        {
+          "source": "parse-orders",
+          "target": "filter-completed"
+        },
+        {
+          "source": "filter-completed",
+          "target": "filtered-sink"
+        }
+      ]
+    },
+    "original": "filter_orders.json"
+  },
+  {
+    "id": "W01",
+    "prompt": "Design a streaming pipeline reading raw_orders, parsing \"order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP\", GroupBy user_id with a 10 minute event-time window, 5 minute slide, 10 minute watermark on event_time, then Aggregate sum(amount) alias total_amount. Write append-finalized results to Parquet /tmp/parquet_windowed_sales.",
+    "reference": {
+      "nodes": [
+        {
+          "id": "orders-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "raw_orders",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-window-example"
+            }
+          }
+        },
+        {
+          "id": "parse-orders",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "group-window",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "GroupBy",
+            "params": {
+              "columns": "user_id",
+              "windowEnabled": true,
+              "windowDuration": "10 minutes",
+              "windowSlide": "5 minutes",
+              "timestampCol": "event_time",
+              "watermarkDelay": "10 minutes"
+            }
+          }
+        },
+        {
+          "id": "sum-amount",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "Aggregate",
+            "params": {
+              "aggregations": [
+                {
+                  "func": "sum",
+                  "col": "amount",
+                  "alias": "total_amount"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "parquet-sink",
+          "type": "parquetSink",
+          "data": {
+            "path": "/tmp/parquet_windowed_sales",
+            "params": {}
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "orders-source",
+          "target": "parse-orders"
+        },
+        {
+          "source": "parse-orders",
+          "target": "group-window"
+        },
+        {
+          "source": "group-window",
+          "target": "sum-amount"
+        },
+        {
+          "source": "sum-amount",
+          "target": "parquet-sink"
+        }
+      ]
+    },
+    "original": "windowed_sales_to_parquet.json"
+  },
+  {
+    "id": "W02",
+    "prompt": "Create Kafka raw_orders -> ParseJSON schema \"order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP\" -> GroupBy user_id with windowDuration=\"15 minutes\", windowSlide=\"5 minutes\", timestampCol=\"event_time\", watermarkDelay=\"10 minutes\" -> Aggregate sum amount as total_amount -> Parquet /tmp/parquet_windowed_sales.",
+    "reference": {
+      "nodes": [
+        {
+          "id": "orders-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "raw_orders",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-window-example"
+            }
+          }
+        },
+        {
+          "id": "parse-orders",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "group-window",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "GroupBy",
+            "params": {
+              "columns": "user_id",
+              "windowEnabled": true,
+              "windowDuration": "15 minutes",
+              "windowSlide": "5 minutes",
+              "timestampCol": "event_time",
+              "watermarkDelay": "10 minutes"
+            }
+          }
+        },
+        {
+          "id": "sum-amount",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "Aggregate",
+            "params": {
+              "aggregations": [
+                {
+                  "func": "sum",
+                  "col": "amount",
+                  "alias": "total_amount"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "parquet-sink",
+          "type": "parquetSink",
+          "data": {
+            "path": "/tmp/parquet_windowed_sales",
+            "params": {}
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "orders-source",
+          "target": "parse-orders"
+        },
+        {
+          "source": "parse-orders",
+          "target": "group-window"
+        },
+        {
+          "source": "group-window",
+          "target": "sum-amount"
+        },
+        {
+          "source": "sum-amount",
+          "target": "parquet-sink"
+        }
+      ]
+    },
+    "original": "windowed_sales_to_parquet.json"
+  },
+  {
+    "id": "J01",
+    "prompt": "Join two Kafka streaming sources, orders and events. Parse orders with \"order_id STRING, user_id INT, amount DOUBLE, event_time TIMESTAMP\", events with \"event_id STRING, user_id INT, event_type STRING, event_time TIMESTAMP\". Inner join by user_id, enable watermarks on event_time with 10 minutes on both sides, bound event-time before=10 minutes after=5 minutes. Output Kafka joined_events.",
+    "reference": {
+      "nodes": [
+        {
+          "id": "orders-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "orders",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-join-orders"
+            }
+          }
+        },
+        {
+          "id": "parse-orders",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "order_id STRING, user_id INT, amount DOUBLE, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "events-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "events",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-join-events"
+            }
+          }
+        },
+        {
+          "id": "parse-events",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "event_id STRING, user_id INT, event_type STRING, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "bounded-join",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "Join",
+            "params": {
+              "joinKey": "user_id",
+              "joinType": "inner",
+              "enableWatermarks": true,
+              "leftWatermarkCol": "event_time",
+              "leftWatermarkDelay": "10 minutes",
+              "rightWatermarkCol": "event_time",
+              "rightWatermarkDelay": "10 minutes",
+              "timeBoundEnabled": true,
+              "timeRangeBefore": "10 minutes",
+              "timeRangeAfter": "5 minutes"
+            }
+          }
+        },
+        {
+          "id": "joined-sink",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "joined_events",
+            "params": {
+              "acksPolicy": "all"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "orders-source",
+          "target": "parse-orders"
+        },
+        {
+          "source": "events-source",
+          "target": "parse-events"
+        },
+        {
+          "source": "parse-orders",
+          "target": "bounded-join"
+        },
+        {
+          "source": "parse-events",
+          "target": "bounded-join"
+        },
+        {
+          "source": "bounded-join",
+          "target": "joined-sink"
+        }
+      ]
+    },
+    "original": "bounded_stream_join.json"
+  },
+  {
+    "id": "J02",
+    "prompt": "Construct two-stream Kafka join: orders and events parsed with schemas \"order_id STRING, user_id INT, amount DOUBLE, event_time TIMESTAMP\" and \"event_id STRING, user_id INT, event_type STRING, event_time TIMESTAMP\". Inner join on user_id, both event_time watermarks 10 minutes, explicit time range before=\"5 minutes\", after=\"5 minutes\"; Kafka sink joined_events.",
+    "reference": {
+      "nodes": [
+        {
+          "id": "orders-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "orders",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-join-orders"
+            }
+          }
+        },
+        {
+          "id": "parse-orders",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "order_id STRING, user_id INT, amount DOUBLE, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "events-source",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "events",
+            "params": {
+              "readMode": "stream",
+              "startingOffset": "earliest",
+              "consumerGroupId": "streametl-join-events"
+            }
+          }
+        },
+        {
+          "id": "parse-events",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "ParseJSON",
+            "params": {
+              "schema": "event_id STRING, user_id INT, event_type STRING, event_time TIMESTAMP"
+            }
+          }
+        },
+        {
+          "id": "bounded-join",
+          "type": "sparkTransform",
+          "data": {
+            "transformType": "Join",
+            "params": {
+              "joinKey": "user_id",
+              "joinType": "inner",
+              "enableWatermarks": true,
+              "leftWatermarkCol": "event_time",
+              "leftWatermarkDelay": "10 minutes",
+              "rightWatermarkCol": "event_time",
+              "rightWatermarkDelay": "10 minutes",
+              "timeBoundEnabled": true,
+              "timeRangeBefore": "5 minutes",
+              "timeRangeAfter": "5 minutes"
+            }
+          }
+        },
+        {
+          "id": "joined-sink",
+          "type": "kafkaTopic",
+          "data": {
+            "label": "joined_events",
+            "params": {
+              "acksPolicy": "all"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "orders-source",
+          "target": "parse-orders"
+        },
+        {
+          "source": "events-source",
+          "target": "parse-events"
+        },
+        {
+          "source": "parse-orders",
+          "target": "bounded-join"
+        },
+        {
+          "source": "parse-events",
+          "target": "bounded-join"
+        },
+        {
+          "source": "bounded-join",
+          "target": "joined-sink"
+        }
+      ]
+    },
+    "original": "bounded_stream_join.json"
+  }
+]

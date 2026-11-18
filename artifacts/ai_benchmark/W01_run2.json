@@ -1,0 +1,107 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "raw_orders",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "latest"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n2",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, status STRING, event_time TIMESTAMP"
+        }
+      },
+      "position": {
+        "x": 340.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n3",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "GroupBy",
+        "params": {
+          "columns": "user_id",
+          "windowEnabled": true,
+          "windowDuration": "10 minutes",
+          "windowSlide": "5 minutes",
+          "timestampCol": "event_time",
+          "watermarkDelay": "10 minutes"
+        }
+      },
+      "position": {
+        "x": 600.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n4",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Aggregate",
+        "params": {
+          "aggregations": [
+            {
+              "func": "sum",
+              "col": "amount",
+              "alias": "total_amount"
+            }
+          ]
+        }
+      },
+      "position": {
+        "x": 860.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n5",
+      "type": "parquetSink",
+      "data": {
+        "params": {},
+        "path": "/tmp/parquet_windowed_sales"
+      },
+      "position": {
+        "x": 1120.0,
+        "y": 80.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n2"
+    },
+    {
+      "id": "e2",
+      "source": "n2",
+      "target": "n3"
+    },
+    {
+      "id": "e3",
+      "source": "n3",
+      "target": "n4"
+    },
+    {
+      "id": "e4",
+      "source": "n4",
+      "target": "n5"
+    }
+  ],
+  "explanation": "Streaming pipeline reading raw_orders, parsing JSON, grouping by user_id with 10 minute event-time window, 5 minute slide, 10 minute watermark, aggregating sum(amount) alias total_amount, and writing to Parquet /tmp/parquet_windowed_sales"
+}
