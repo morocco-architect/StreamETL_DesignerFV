@@ -1,11 +1,11 @@
-# StreamETL Designer — Intelligence-Assisted RC
+# StreamETL Designer - Intelligence-Assisted Low-Code Platform
 
-**Release candidate:** `1.2.0-rc1`  
+**Version under preparation:** `1.2.0` (not yet released)
 **GitHub-ready package:** cleaned of virtual environments, `node_modules`, generated jobs, caches, and nested Git repositories.
 
 StreamETL is a self-hosted low-code environment for designing native Kafka–Spark Structured Streaming DAGs, validating them, generating inspectable PySpark, and executing the generated job on a Docker-based Spark/Kafka stack.
 
-This release candidate merges the corrected StreamETL Core with the **Pipeline Intelligence** layer. The architectural invariant is:
+This version integrates the corrected StreamETL Core with the **Pipeline Intelligence** layer. The architectural invariant is:
 
 ```text
 optional AI → native StreamETL DAG → deterministic validation
@@ -206,9 +206,22 @@ or from repository root:
 
 The script records environment metadata, JUnit output and coverage under `artifacts/local-validation/`. Native DAGs for integration tests are provided under `examples/`.
 
-## Scope
+## Scientific validation - v1.2.0 (pre-release)
 
-### Implemented in this release candidate
+- Local environment: Windows 11, Python 3.12.10.
+- Backend tests: 94/94 passed.
+- Statement coverage: 82%; combined statement/branch coverage: 79%.
+- Schema-aware validation of 54 archived A/B/C DAGs: A 12/18, B 15/18, C 15/18.
+- Strict DAG agreement: A 3/18, B 4/18, C 3/18.
+- A/B/C evidence is a retrospective assessment, not 54 independent new model generations.
+- Experimental L4 evidence: F01 filtering, W01 windowed aggregation, J01 stream-stream join.
+- Evidence: evaluation/schema_validation_v1/, evaluation/l4/, artifacts/ai_benchmark/, artifacts/ai_benchmark_abc_v2/.
+- CI on Linux and frontend build: pending remote verification.
+- License: MIT (project code; third-party licenses remain applicable).
+
+
+## Scope
+### Implemented in this version
 
 - **Pipeline Intelligence**: design assistance, semantic analysis, explicit repairs, error diagnosis.
 
@@ -240,7 +253,7 @@ For a reproducible Windows evaluation, use a supported Python version (CI covers
 scripts\windows\01_setup_and_l2_evaluate.bat
 ```
 
-This executes the full 34-test backend suite, writes JUnit/coverage evidence, benchmarks deterministic semantic analysis/code generation on the three documented DAGs, checks guardrail decisions, and creates publication-ready PNG figures under `evaluation/figures/`.
+This runs the legacy Windows evaluation workflow (originally documented for 34 tests; validate its current behavior separately), writes JUnit/coverage evidence, benchmarks deterministic semantic analysis/code generation on the three documented DAGs, checks guardrail decisions, and creates publication-ready PNG figures under `evaluation/figures/`.
 
 For runtime screenshots and L3 evidence, see `docs/SCREENSHOT_AND_L3_CHECKLIST.md`. Start the real stack with `scripts\windows\02_start_docker_stack.bat`, then backend and frontend in separate terminals with scripts `03` and `04`.
 

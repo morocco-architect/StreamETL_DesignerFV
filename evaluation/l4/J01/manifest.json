@@ -1,0 +1,28 @@
+{
+  "candidate": "C/J01_run1.json",
+  "candidate_sha256": "285eb3d4d83190f16d73049d63ad0ec8a6582bd605740e8a384140bd9d027021",
+  "raw_variant": "only operational topic/path/checkpoint isolation; no ParseJSON",
+  "parsed_variant": "same candidate plus explicit two ParseJSON nodes; NOT unmodified original",
+  "source_topics": {
+    "orders": "l4_j01_orders_in",
+    "events": "l4_j01_events_in"
+  },
+  "parquet_paths": {
+    "raw": "/app/evaluation/l4/outputs/J01_raw_parquet",
+    "parsed": "/app/evaluation/l4/outputs/J01_parsed_parquet"
+  },
+  "checkpoints": {
+    "raw": "/app/evaluation/l4/checkpoints/J01_raw",
+    "parsed": "/app/evaluation/l4/checkpoints/J01_parsed"
+  },
+  "code_sha256": {
+    "raw": "0220c70d1595cace4f4555f1f778a72ca62adf997f4e32532960908402f1bda3",
+    "parsed": "5aafa082ac20014facd940042c5b49e19d27def9d22a0b3be6683e3c487ad9a6"
+  },
+  "no_runtime_executed": true,
+  "warnings": [
+    "No real Spark run, no claim of runtime acceptance",
+    "Raw variant likely fails unresolved user_id/event_time",
+    "Parsed variant must be tested separately with finite known input datasets"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "scenario": "L4-F01",
+  "condition": "B",
+  "candidate": "F01_run1",
+  "run_executed": false,
+  "candidate_sha256": "9fea0af768193d03e2aa02eabf5670d01f8fbee1e7cebf6ff5febb9af852686a",
+  "isolated_code_sha256": "5ee9388f3dd5c568a4ee78b7816cf8cac03ce03780aef72eead8bf31456bbe11",
+  "source_topic": "l4_f01_orders_in",
+  "sink_topic": "l4_f01_orders_out",
+  "checkpoint": "/app/evaluation/l4/checkpoints/F01",
+  "input_count": 6,
+  "expected_count": 3,
+  "expected_ids": [
+    "L4F-01",
+    "L4F-04",
+    "L4F-06"
+  ],
+  "changes": [
+    "input/output topic isolation",
+    "source consumer group isolation",
+    "checkpoint path isolation"
+  ],
+  "note": "Generated via unmodified StreamETL endpoint; shared pipeline_job.py restored; no Docker/Spark/Kafka run performed."
+}

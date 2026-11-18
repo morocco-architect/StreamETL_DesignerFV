@@ -1,0 +1,89 @@
+{
+  "generated_utc": "2026-11-14T18:04:39.291621+00:00",
+  "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "description": "Read-only retrospective re-evaluation of archived A/B/C DAGs under the currently installed schema-aware validator; no Kafka/Spark execution. Historical A/B/C outputs are not independent model runs for C.",
+  "reference_validation": {
+    "F01": {
+      "valid": true,
+      "errors": []
+    },
+    "F02": {
+      "valid": true,
+      "errors": []
+    },
+    "W01": {
+      "valid": true,
+      "errors": []
+    },
+    "W02": {
+      "valid": true,
+      "errors": []
+    },
+    "J01": {
+      "valid": true,
+      "errors": []
+    },
+    "J02": {
+      "valid": true,
+      "errors": []
+    }
+  },
+  "source_sha256": {
+    "schema_analyzer.py": "e93ae0e52232bedbab16b8c95cf13351aef6099b2613f5a9610e81d17fb59d85",
+    "semantic_advisor.py": "67d097b823335d2429cccc596ba3f0001e0992fb856f2699536e30c32e9e7bce",
+    "run_ai_benchmark.py": "91df203eca3ef9129e079f4db1148b035de990d68f9f7194ae477d9891fcf096",
+    "run_abc_followup.py": "c79f7928dc44a33b113638a8f44c981fa775ce5f09661707cd94802a3b2fb802",
+    "task_manifest.json": "8d9c94d173c7eb650832e3f804a0389a83a580ada2a946a4f0235738c1a38a86"
+  },
+  "historical_results_sha256": {
+    "A": "68b05eaa3331df77d7ecc6731c693a4df6a5b2a1f38757753d3c9b0ef4701c93",
+    "B": "480afd87c3c67e654ec88a3064d66b87fc6b54c3588b88238a1232138dd374be",
+    "C": "e3e9502ad36a034c8854198df5d2d8562f356ad7b052c3d8fdc59364e398396d"
+  },
+  "csv_sha256": "69d73282c1d6d7eb2b37e75062eb153dd144f5e88da3fb4879bcb2752ec8edbc",
+  "summary": {
+    "A": {
+      "historical_valid": 12,
+      "v1_valid": 12,
+      "strict_exact": 3,
+      "exact_without_label": 3,
+      "per_task_v1": {
+        "F01": 3,
+        "F02": 3,
+        "W01": 3,
+        "W02": 3,
+        "J01": 0,
+        "J02": 0
+      }
+    },
+    "B": {
+      "historical_valid": 15,
+      "v1_valid": 15,
+      "strict_exact": 4,
+      "exact_without_label": 4,
+      "per_task_v1": {
+        "F01": 3,
+        "F02": 3,
+        "W01": 3,
+        "W02": 3,
+        "J01": 0,
+        "J02": 3
+      }
+    },
+    "C": {
+      "historical_valid": 18,
+      "v1_valid": 15,
+      "strict_exact": 3,
+      "exact_without_label": 3,
+      "per_task_v1": {
+        "F01": 3,
+        "F02": 3,
+        "W01": 3,
+        "W02": 3,
+        "J01": 0,
+        "J02": 3
+      }
+    }
+  }
+}

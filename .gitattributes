@@ -1,0 +1,3 @@
+artifacts/** -text
+evaluation/** -text
+backend/intelligence/semantic_advisor.py -text

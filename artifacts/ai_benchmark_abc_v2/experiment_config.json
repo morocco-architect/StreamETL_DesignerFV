@@ -1,0 +1,11 @@
+{
+  "provider": "ollama",
+  "model": "llama3.1:8b",
+  "repeats": 3,
+  "baseline": "C:\\StreamETL-1.2.0-rc1\\artifacts\\ai_benchmark",
+  "baseline_manifest_sha256": "8d9c94d173c7eb650832e3f804a0389a83a580ada2a946a4f0235738c1a38a86",
+  "baseline_results_sha256": "68b05eaa3331df77d7ecc6731c693a4df6a5b2a1f38757753d3c9b0ef4701c93",
+  "system_prompt_sha256": "30c3a8c6ca79f5f857c656de439c1d13a493d62442327d09f839bcf2bd26494e",
+  "enhanced_prompt_sha256": "353e0b5b1797d238eeae381fa0cec7129644c33ce243f99263461a4d9f4da57d",
+  "C_repair": "Only predefined explicit join constraints via PipelineRepairer; requires frozen A DAG; no LLM call for C."
+}

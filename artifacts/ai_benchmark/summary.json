@@ -1,0 +1,34 @@
+{
+  "provider": "ollama",
+  "model": "llama3.1:8b",
+  "tasks": 6,
+  "repeats": 3,
+  "runs": 18,
+  "interpretation": "Code generation and compile() do not establish Spark runtime execution. Exact graph agreement is strict on declared semantic params, ignoring node IDs/UI layout/operational-only options.",
+  "metrics": {
+    "raw_response_parsed": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "pydantic_valid": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "semantic_valid": {
+      "count": 12,
+      "rate": 0.6667
+    },
+    "codegen_success": {
+      "count": 12,
+      "rate": 0.6667
+    },
+    "python_compiles": {
+      "count": 12,
+      "rate": 0.6667
+    },
+    "exact_dag_agreement": {
+      "count": 3,
+      "rate": 0.1667
+    }
+  }
+}

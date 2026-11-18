@@ -55,24 +55,24 @@ class OllamaProvider(AIProvider):
     def __init__(self) -> None:
         self.host = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
         self.model = os.getenv("STREAMETL_AI_MODEL", "llama3.1:8b")
-        self.timeout = float(os.getenv("STREAMETL_AI_TIMEOUT_SECONDS", "60"))
+        self.timeout = float(os.getenv("STREAMETL_AI_TIMEOUT_SECONDS", "180"))
 
     def complete_json(self, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
         try:
             response = requests.post(
-                f"{self.host}/api/chat",
-                json={
-                    "model": self.model,
-                    "stream": False,
-                    "format": "json",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "options": {"temperature": 0},
-                },
-                timeout=self.timeout,
-            )
+    f"{self.host}/api/chat",
+    json={
+        "model": self.model,
+        "stream": False,
+        "format": "json",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "options": {"temperature": 0},
+    },
+    timeout=self.timeout,
+)
             response.raise_for_status()
             data = response.json()
             content = data.get("message", {}).get("content", "")
@@ -96,7 +96,7 @@ class OpenAIProvider(AIProvider):
         if not self.api_key:
             raise ProviderError("OPENAI_API_KEY is required for the OpenAI provider")
         self.model = os.getenv("STREAMETL_AI_MODEL", "gpt-5.6-luna")
-        self.timeout = float(os.getenv("STREAMETL_AI_TIMEOUT_SECONDS", "60"))
+        self.timeout = float(os.getenv("STREAMETL_AI_TIMEOUT_SECONDS", "180"))
 
     def complete_json(self, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
         headers = {

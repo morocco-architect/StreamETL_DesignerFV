@@ -37,7 +37,9 @@ _DURATION_RE = re.compile(
 
 
 def _valid_duration(value: object) -> bool:
-    return bool(_DURATION_RE.fullmatch(str(value or "")))
+    text = str(value or "").strip()
+    # Keep the low-code UI ergonomic: bare numbers mean seconds.
+    return bool(re.fullmatch(r"\d+(?:\.\d+)?", text) or _DURATION_RE.fullmatch(text))
 
 
 class SemanticAdvisor:
@@ -116,6 +118,8 @@ class SemanticAdvisor:
                 cls._analyze_transform(node, graph, issues)
 
         cls._analyze_runtime_lineage(pipeline, graph, issues)
+        from .schema_analyzer import SchemaAnalyzer
+        issues.extend(SchemaAnalyzer.analyze(pipeline))
         summary = ValidationSummary(
             errors=sum(i.severity == Severity.ERROR for i in issues),
             warnings=sum(i.severity == Severity.WARNING for i in issues),
@@ -339,7 +343,7 @@ class SemanticAdvisor:
                                 Severity.ERROR,
                                 node,
                                 "The stream-stream time bound is incomplete or uses an unsupported duration format.",
-                                "Use values such as '10 minutes' and '5 minutes' for timeRangeBefore/timeRangeAfter.",
+                                "Use a number of seconds (for example '10') or an explicit duration such as '10 seconds' or '5 minutes'.",
                             ))
                 elif left_stream != right_stream:
                     static_id = right_id if left_stream else left_id

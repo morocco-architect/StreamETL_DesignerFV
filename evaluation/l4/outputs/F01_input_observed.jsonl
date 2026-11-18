@@ -1,0 +1,12 @@
+{"order_id":"L4F-01","user_id":11,"amount":150.0,"status":"COMPLETED","event_time":"2026-11-14T00:00:00"}
+{"order_id":"L4F-02","user_id":12,"amount":100.0,"status":"COMPLETED","event_time":"2026-11-14T00:00:01"}
+{"order_id":"L4F-03","user_id":13,"amount":300.0,"status":"CANCELLED","event_time":"2026-11-14T00:00:02"}
+{"order_id":"L4F-04","user_id":14,"amount":100.01,"status":"COMPLETED","event_time":"2026-11-14T00:00:03"}
+{"order_id":"L4F-05","user_id":15,"amount":20.0,"status":"PENDING","event_time":"2026-11-14T00:00:04"}
+{"order_id":"L4F-06","user_id":16,"amount":999.0,"status":"COMPLETED","event_time":"2026-11-14T00:00:05"}
+{"order_id":"L4F-01","user_id":11,"amount":150.0,"status":"COMPLETED","event_time":"2026-11-14T00:00:00"}
+{"order_id":"L4F-02","user_id":12,"amount":100.0,"status":"COMPLETED","event_time":"2026-11-14T00:00:01"}
+{"order_id":"L4F-03","user_id":13,"amount":300.0,"status":"CANCELLED","event_time":"2026-11-14T00:00:02"}
+{"order_id":"L4F-04","user_id":14,"amount":100.01,"status":"COMPLETED","event_time":"2026-11-14T00:00:03"}
+{"order_id":"L4F-05","user_id":15,"amount":20.0,"status":"PENDING","event_time":"2026-11-14T00:00:04"}
+{"order_id":"L4F-06","user_id":16,"amount":999.0,"status":"COMPLETED","event_time":"2026-11-14T00:00:05"}

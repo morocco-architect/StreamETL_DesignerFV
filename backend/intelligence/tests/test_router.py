@@ -297,6 +297,8 @@ def test_stream_stream_join_with_watermarks_and_time_bound_is_valid():
         "nodes": [
             {"id": "left", "type": "kafkaTopic", "data": {"label": "orders", "params": {"readMode": "stream"}}},
             {"id": "right", "type": "kafkaTopic", "data": {"label": "events", "params": {"readMode": "stream"}}},
+            {"id": "left_parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP"}}},
+            {"id": "right_parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP"}}},
             {
                 "id": "join",
                 "type": "sparkTransform",
@@ -319,8 +321,10 @@ def test_stream_stream_join_with_watermarks_and_time_bound_is_valid():
             {"id": "sink", "type": "kafkaTopic", "data": {"label": "joined", "params": {}}},
         ],
         "edges": [
-            {"source": "left", "target": "join"},
-            {"source": "right", "target": "join"},
+            {"source": "left", "target": "left_parse"},
+            {"source": "left_parse", "target": "join"},
+            {"source": "right", "target": "right_parse"},
+            {"source": "right_parse", "target": "join"},
             {"source": "join", "target": "sink"},
         ],
     }
@@ -330,6 +334,32 @@ def test_stream_stream_join_with_watermarks_and_time_bound_is_valid():
     assert "STREAM_STREAM_JOIN_NO_WATERMARK" not in codes
     assert "STREAM_STREAM_JOIN_NO_TIME_BOUND" not in codes
     assert "STREAM_STREAM_JOIN_TIME_BOUND_INVALID" not in codes
+
+
+def test_join_without_parsejson_is_rejected_by_schema_validation():
+    payload = {
+        "nodes": [
+            {"id": "left", "type": "kafkaTopic", "data": {"label": "orders", "params": {"readMode": "stream"}}},
+            {"id": "right", "type": "kafkaTopic", "data": {"label": "events", "params": {"readMode": "stream"}}},
+            {"id": "join", "type": "sparkTransform", "data": {"transformType": "Join", "params": {
+                "joinKey": "user_id", "joinType": "inner", "enableWatermarks": True,
+                "leftWatermarkCol": "event_time", "leftWatermarkDelay": "10 minutes",
+                "rightWatermarkCol": "event_time", "rightWatermarkDelay": "10 minutes",
+                "timeBoundEnabled": True, "timeRangeBefore": "10 minutes", "timeRangeAfter": "5 minutes"}}},
+            {"id": "sink", "type": "kafkaTopic", "data": {"label": "joined", "params": {}}},
+        ],
+        "edges": [
+            {"source": "left", "target": "join"},
+            {"source": "right", "target": "join"},
+            {"source": "join", "target": "sink"},
+        ],
+    }
+    body = client.post("/api/intelligence/analyze", json=payload).json()
+    assert body["valid"] is False
+    issues = [i for i in body["issues"] if i["code"] == "SCHEMA_COLUMN_UNAVAILABLE"]
+    assert any("event_time" in issue["message"] for issue in issues)
+    assert any("user_id" in issue["message"] for issue in issues)
+
 
 
 def test_invalid_stream_stream_time_bound_is_error():
@@ -415,6 +445,7 @@ def test_windowed_watermarked_aggregation_can_target_parquet():
     payload = {
         "nodes": [
             {"id": "src", "type": "kafkaTopic", "data": {"label": "orders", "params": {"readMode": "stream"}}},
+            {"id": "parse", "type": "sparkTransform", "data": {"transformType": "ParseJSON", "params": {"schema": "user_id INT, event_time TIMESTAMP, amount DOUBLE"}}},
             {
                 "id": "gb",
                 "type": "sparkTransform",
@@ -433,7 +464,8 @@ def test_windowed_watermarked_aggregation_can_target_parquet():
             {"id": "sink", "type": "parquetSink", "data": {"path": "/tmp/out", "params": {}}},
         ],
         "edges": [
-            {"source": "src", "target": "gb"},
+            {"source": "src", "target": "parse"},
+            {"source": "parse", "target": "gb"},
             {"source": "gb", "target": "agg"},
             {"source": "agg", "target": "sink"},
         ],
@@ -441,3 +473,28 @@ def test_windowed_watermarked_aggregation_can_target_parquet():
     body = client.post("/api/intelligence/analyze", json=payload).json()
     assert body["valid"] is True
     assert "PARQUET_AGGREGATION_UNSUPPORTED_BY_CURRENT_GENERATOR" not in {i["code"] for i in body["issues"]}
+
+
+def test_windowed_aggregation_without_parsejson_is_rejected():
+    payload = {
+        "nodes": [
+            {"id": "src", "type": "kafkaTopic", "data": {"label": "orders", "params": {"readMode": "stream"}}},
+            {"id": "gb", "type": "sparkTransform", "data": {"transformType": "GroupBy", "params": {
+                "columns": "user_id", "windowEnabled": True, "windowDuration": "10 minutes",
+                "timestampCol": "event_time", "watermarkDelay": "10 minutes"}}},
+            {"id": "agg", "type": "sparkTransform", "data": {"transformType": "Aggregate", "params": {
+                "aggregations": [{"func": "sum", "col": "amount", "alias": "total"}]}}},
+            {"id": "sink", "type": "parquetSink", "data": {"path": "/tmp/out", "params": {}}},
+        ],
+        "edges": [
+            {"source": "src", "target": "gb"},
+            {"source": "gb", "target": "agg"},
+            {"source": "agg", "target": "sink"},
+        ],
+    }
+    body = client.post("/api/intelligence/analyze", json=payload).json()
+    assert body["valid"] is False
+    issues = [i for i in body["issues"] if i["code"] == "SCHEMA_COLUMN_UNAVAILABLE"]
+    assert any("user_id" in issue["message"] for issue in issues)
+    assert any("event_time" in issue["message"] for issue in issues)
+    assert any("amount" in issue["message"] for issue in issues)

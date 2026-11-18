@@ -1,0 +1,45 @@
+{
+  "scenario": "L4-W01",
+  "condition": "B",
+  "candidate": "W01_run1",
+  "run_executed": false,
+  "candidate_sha256": "5c3311a3cfe4d07742ff4638f35bafa8ad0a4b951388f026dd03f0db90fd2d08",
+  "generated_code_sha256": "43985cb970490364d4212d9c815babb3fd46f2c8ea2dd6cdc3a1f438698063b7",
+  "source_topic": "l4_w01_orders_in",
+  "output_path": "/app/evaluation/l4/outputs/W01_parquet",
+  "checkpoint_path": "/app/evaluation/l4/checkpoints/W01",
+  "stages": [
+    3,
+    1,
+    1
+  ],
+  "expected_user11": [
+    {
+      "user_id": 11,
+      "window_start": "2026-11-14T00:00:00Z",
+      "window_end": "2026-11-14T00:10:00Z",
+      "total_amount": 120.0
+    },
+    {
+      "user_id": 11,
+      "window_start": "2026-11-14T00:05:00Z",
+      "window_end": "2026-11-14T00:15:00Z",
+      "total_amount": 60.0
+    },
+    {
+      "user_id": 11,
+      "window_start": "2026-11-14T00:10:00Z",
+      "window_end": "2026-11-14T00:20:00Z",
+      "total_amount": 40.0
+    }
+  ],
+  "changes": [
+    "isolate input topic",
+    "startingOffsets changed latest -> earliest for controlled reproducibility",
+    "isolated consumer group",
+    "isolate parquet output",
+    "isolate checkpoint"
+  ],
+  "caution": "Event-time batches must be sent separately, after preceding batch is committed. Do not claim baseline exact agreement from this isolated runtime trial.",
+  "note": "No Kafka/Spark runtime executed; backend/pipeline_job.py restored."
+}

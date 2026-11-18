@@ -1,0 +1,124 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "orders",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n2",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "events",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 230.0
+      }
+    },
+    {
+      "id": "n3",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "order_id STRING, user_id INT, amount DOUBLE, event_time TIMESTAMP"
+        }
+      },
+      "position": {
+        "x": 340.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n4",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "ParseJSON",
+        "params": {
+          "schema": "event_id STRING, user_id INT, event_type STRING, event_time TIMESTAMP"
+        }
+      },
+      "position": {
+        "x": 340.0,
+        "y": 230.0
+      }
+    },
+    {
+      "id": "n5",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Join",
+        "params": {
+          "joinKey": "user_id",
+          "joinType": "inner",
+          "enableWatermarks": true,
+          "leftWatermarkCol": "event_time",
+          "leftWatermarkDelay": "10 minutes",
+          "rightWatermarkCol": "event_time",
+          "rightWatermarkDelay": "10 minutes",
+          "timeBoundEnabled": true,
+          "timeRangeBefore": "5 minutes",
+          "timeRangeAfter": "5 minutes"
+        }
+      },
+      "position": {
+        "x": 600.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n6",
+      "type": "parquetSink",
+      "data": {
+        "params": {},
+        "path": "/tmp/joined_events"
+      },
+      "position": {
+        "x": 860.0,
+        "y": 80.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n3"
+    },
+    {
+      "id": "e2",
+      "source": "n2",
+      "target": "n4"
+    },
+    {
+      "id": "e3",
+      "source": "n3",
+      "target": "n5"
+    },
+    {
+      "id": "e4",
+      "source": "n4",
+      "target": "n5"
+    },
+    {
+      "id": "e5",
+      "source": "n5",
+      "target": "n6"
+    }
+  ]
+}

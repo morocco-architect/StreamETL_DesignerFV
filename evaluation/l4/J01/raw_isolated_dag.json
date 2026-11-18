@@ -1,0 +1,89 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "l4_j01_orders_in",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest",
+          "consumerGroupId": "l4-j01-orders-20261114"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n2",
+      "type": "kafkaTopic",
+      "data": {
+        "label": "l4_j01_events_in",
+        "params": {
+          "readMode": "stream",
+          "startingOffset": "earliest",
+          "consumerGroupId": "l4-j01-events-20261114"
+        }
+      },
+      "position": {
+        "x": 80.0,
+        "y": 230.0
+      }
+    },
+    {
+      "id": "n3",
+      "type": "sparkTransform",
+      "data": {
+        "transformType": "Join",
+        "params": {
+          "joinKey": "user_id",
+          "rightKey": "user_id",
+          "joinType": "inner",
+          "enableWatermarks": true,
+          "leftWatermarkCol": "event_time",
+          "leftWatermarkDelay": "10 minutes",
+          "rightWatermarkCol": "event_time",
+          "rightWatermarkDelay": "10 minutes",
+          "timeBoundEnabled": true,
+          "timeRangeBefore": "10 minutes",
+          "timeRangeAfter": "5 minutes"
+        }
+      },
+      "position": {
+        "x": 340.0,
+        "y": 80.0
+      }
+    },
+    {
+      "id": "n4",
+      "type": "parquetSink",
+      "data": {
+        "params": {},
+        "path": "/app/evaluation/l4/outputs/J01_raw_parquet"
+      },
+      "position": {
+        "x": 600.0,
+        "y": 80.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n3"
+    },
+    {
+      "id": "e2",
+      "source": "n2",
+      "target": "n3"
+    },
+    {
+      "id": "e3",
+      "source": "n3",
+      "target": "n4"
+    }
+  ]
+}

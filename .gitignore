@@ -61,3 +61,10 @@ spark-docker/
 
 # L3 runtime output directories
 evaluation/l3/*_output/
+
+# StreamETL L4 generated runtime outputs
+evaluation/l4/outputs/*_parquet/
+evaluation/l4/checkpoints/
+# Generated local coverage data
+backend/.coverage
+artifacts/coverage_html*/

@@ -1,0 +1,31 @@
+{
+  "condition": "C",
+  "runs": 18,
+  "metrics": {
+    "raw_response_parsed": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "pydantic_valid": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "semantic_valid": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "codegen_success": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "python_compiles": {
+      "count": 18,
+      "rate": 1.0
+    },
+    "exact_dag_agreement": {
+      "count": 3,
+      "rate": 0.1667
+    }
+  },
+  "caveat": "Deterministic tests: codegen and Python compile are not Kafka/Spark execution. C uses explicit task constraints (oracle-informed), not autonomous correction."
+}
